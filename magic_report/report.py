@@ -1,15 +1,18 @@
 import json
 import math
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import plotly.graph_objects as go
 from pandas.io.clipboard import clipboard_set
 
+if TYPE_CHECKING:
+    import pandas as pd
+
 __all__ = ["Report"]
 
 
-def quantize_json(value, float_offset: int = 1):
+def float_format(value: float, float_offset: int = 1):
     if isinstance(value, float):
         if value == 0:
             return value
@@ -23,7 +26,12 @@ def quantize_json(value, float_offset: int = 1):
         else:
             value = int(f"{value:.0f}")
 
-        return value
+    return value
+
+
+def quantize_json(value, float_offset: int = 1):
+    if isinstance(value, float):
+        return float_format(value, float_offset)
 
     elif isinstance(value, (list, tuple)):
         for n in range(len(value)):
@@ -41,12 +49,40 @@ def as_string(x, float_offset: int = 1) -> str:
     #     return x.to_html(include_plotlyjs='cdn', include_mathjax='cdn', full_html=False)
     if hasattr(x, "to_json"):
         new_x = json.loads(x.to_json())
-        # remove unecessary information from json
+        # remove unnecessary information from json
         if "layout" in new_x and "template" in new_x["layout"]:
             new_x["layout"].pop("template")
         return json.dumps(quantize_json(new_x, float_offset))
     elif hasattr(x, "_repr_html_"):
         return x._repr_html_()
+    elif isinstance(x, str):
+        return x
+
+
+def pad(value: str, width: int):
+    current = len(value)
+    if width < current:
+        return value
+    else:
+        remaining = width - current
+        padding = remaining // 2
+        if remaining % 2 == 0:
+            return value.ljust(current + padding).rjust(current + 2 * padding)
+        else:
+            return value.ljust(current + padding + 1).rjust(current + 2 * padding + 1)
+
+
+def to_markdown_table(x: "pd.DataFrame") -> str:
+    x = x.to_dict("list")
+    rows = []
+    for key, values in x.items():
+        str_values = tuple(map(str, map(float_format, (key, *values))))
+        max_width = max(map(len, str_values)) + 2
+        str_values = map(lambda value: pad(value, max_width), str_values)
+        rows.append(tuple(str_values))
+    rows = [f"|{'|'.join(row)}|" for row in zip(*rows)]
+    rows.insert(1, f"|{'-' * (len(rows[0]) - 2)}|")
+    return "\n".join(rows)
 
 
 def to_clipboard(x, float_offset: int = 1):

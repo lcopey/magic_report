@@ -1,7 +1,7 @@
 from ipykernel.zmqshell import ZMQInteractiveShell
 from IPython.core.magic import Magics, cell_magic, line_magic, magics_class
 
-from .report import Report, to_clipboard
+from .report import Report, to_clipboard, to_markdown_table
 
 
 class MissingFileError(BaseException):
@@ -45,7 +45,10 @@ class ReportMagic(Magics):
     def to_clipboard(self, line, cell):
         shell = _get_shell()
         results = shell.ev(cell)
-        to_clipboard(results)
+        if line is None:
+            to_clipboard(results)
+        elif line == "markdown":
+            to_clipboard(to_markdown_table(results))
         return results
 
 
