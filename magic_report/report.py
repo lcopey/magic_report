@@ -37,8 +37,11 @@ def quantize_json(value, float_offset: int = 1):
 
 
 def as_string(x, float_offset: int = 1) -> str:
+    # if isinstance(x, go.Figure):
+    #     return x.to_html(include_plotlyjs='cdn', include_mathjax='cdn', full_html=False)
     if hasattr(x, "to_json"):
         new_x = json.loads(x.to_json())
+        # remove unecessary information from json
         if "layout" in new_x and "template" in new_x["layout"]:
             new_x["layout"].pop("template")
         return json.dumps(quantize_json(new_x, float_offset))
@@ -50,26 +53,26 @@ def to_clipboard(x, float_offset: int = 1):
     clipboard_set(as_string(x, float_offset))
 
 
-@dataclass
 class Template:
-    start: str
-    end: str
+    def __init__(self, template: str):
+        self.template = template
 
-    def format(self, section: str, text: str):
-        return f"{self.start_id(section)}\n{text}\n{self.end_id(section)}"
+    @staticmethod
+    def start_tag(id: str):
+        return f"<div><!-- start {id} --></div>"
 
-    def start_id(self, section: str):
-        return self.start.format(section)
+    @staticmethod
+    def end_tag(id: str):
+        return f"<div><!-- end {id} --></div>"
 
-    def end_id(self, section: str):
-        return self.end.format(section)
+    def format(self, id: str, text: str):
+        return (
+            f"{self.start_tag(id)}\n{self.template.format(text)}\n{self.end_tag(id)}\n"
+        )
 
 
-PLOTLY_FIGURE = Template("```plotly <!-- id={} -->", "```\n")
-HTML = Template(
-    '<div id={} style="display: flex; align-items: center; justify-content: center">',
-    "<!-- id={} --></div>\n",
-)
+PLOTLY_FIGURE = Template("```plotly\n{}\n```")
+HTML = Template("<div>\n{}\n</div>")
 
 
 @dataclass
@@ -121,19 +124,20 @@ class Report:
     def __init__(self, file_path):
         self.file_path = file_path
 
-    def write(self, section_id: str, item: Any, float_offset: int = 1) -> str:
+    def write(self, id: str, item: Any, float_offset: int = 1):
         if isinstance(item, go.Figure):
             template = PLOTLY_FIGURE
+            # template = HTML
         elif hasattr(item, "_repr_html_"):
             template = HTML
         else:
             raise TypeError
 
         section = Section.from_file_path(self.file_path)
-        section.find(template.start_id(section_id), template.end_id(section_id))
+        section.find(template.start_tag(id), template.end_tag(id))
 
         text = as_string(item, float_offset=float_offset)
-        text = template.format(section_id, text)
+        text = template.format(id, text)
 
         section.insert(text)
         section.write(self.file_path)
