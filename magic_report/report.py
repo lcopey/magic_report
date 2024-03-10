@@ -9,7 +9,7 @@ from pandas.io.clipboard import clipboard_set
 if TYPE_CHECKING:
     import pandas as pd
 
-__all__ = ["Report"]
+__all__ = ["Report", "to_clipboard", "to_markdown_table"]
 
 
 def float_format(value: float, float_offset: int = 1):

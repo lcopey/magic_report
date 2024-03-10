@@ -12,11 +12,6 @@ class MissingIdError(BaseException):
     ...
 
 
-# def _get_shell() -> ZMQInteractiveShell:
-#     shell: ZMQInteractiveShell = get_ipython()
-#     return shell
-
-
 @magics_class
 class ReportMagic(Magics):
     def __init__(self, shell):
