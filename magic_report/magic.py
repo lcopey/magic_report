@@ -12,9 +12,9 @@ class MissingIdError(BaseException):
     ...
 
 
-def _get_shell() -> ZMQInteractiveShell:
-    shell: ZMQInteractiveShell = get_ipython()
-    return shell
+# def _get_shell() -> ZMQInteractiveShell:
+#     shell: ZMQInteractiveShell = get_ipython()
+#     return shell
 
 
 @magics_class
@@ -36,20 +36,18 @@ class ReportMagic(Magics):
         if line is None:
             raise MissingIdError("missing id in the magic")
 
-        shell = _get_shell()
-        results = shell.ev(cell)
-        self.report.write(line, results)
-        return results
+        shell_results = self.shell.run_cell(cell)
+        if shell_results.result is not None:
+            self.report.write(line, shell_results.result)
 
     @cell_magic
     def to_clipboard(self, line, cell):
-        shell = _get_shell()
-        results = shell.ev(cell)
-        if line is None:
-            to_clipboard(results)
-        elif line == "markdown":
-            to_clipboard(to_markdown_table(results))
-        return results
+        shell_results = self.shell.run_cell(cell)
+        if shell_results.result is not None:
+            if line is None:
+                to_clipboard(shell_results.result)
+            elif line == "markdown":
+                to_clipboard(to_markdown_table(shell_results.result))
 
 
 def load_ipython_extension(ipython: ZMQInteractiveShell):
